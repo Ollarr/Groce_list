@@ -22,6 +22,9 @@ class GroceryList extends StatefulWidget {
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> newGroceryItems = [];
 
+  var isLoading = true;
+  String? fetchError;
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +36,12 @@ class _GroceryListState extends State<GroceryList> {
         "grocelist-31cb2-default-rtdb.firebaseio.com", "shopping-list.json");
 
     final response = await http.get(url);
+
+    if (response.statusCode >= 400) {
+      setState(() {
+        fetchError = "Failed to fetch data, Please try again later";
+      });
+    }
     final Map<String, dynamic> groceryListData = json.decode(response.body);
     // This is created temporarily here so that it can replace newGroceryItems later.
     final List<GroceryItem> groceryListItem = [];
@@ -53,6 +62,7 @@ class _GroceryListState extends State<GroceryList> {
     }
     setState(() {
       newGroceryItems = groceryListItem;
+      isLoading = false;
     });
     print(groceryListItem);
   }
@@ -63,17 +73,21 @@ class _GroceryListState extends State<GroceryList> {
     //     builder: (ctx) => const NewItem(),
     //   ),
     // );
-    await Navigator.of(context).push(
+    final newItem = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => const NewItem(),
       ),
     );
 
-    fetchGroceryItems();
+    // fetchGroceryItems();
 
-    // if (newItem == null) {
-    //   return;
-    // }
+    if (newItem == null) {
+      return;
+    }
+
+    setState(() {
+      newGroceryItems.add(newItem);
+    });
     // setState(() {
     //   newGroceryItems.add(newItem);
     // });
@@ -84,16 +98,20 @@ class _GroceryListState extends State<GroceryList> {
     Widget content = const Center(
       child: Text("No items aded yet"),
     );
-
+    if (isLoading) {
+      content = const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
     if (newGroceryItems.isNotEmpty) {
       content = ListView.builder(
           itemCount: newGroceryItems.length,
           itemBuilder: (ctx, index) => Dismissible(
                 key: ValueKey(newGroceryItems[index].id),
                 onDismissed: (direction) {
-                  setState(() {
-                    newGroceryItems.remove(newGroceryItems[index]);
-                  });
+                  // setState(() {
+                  //   newGroceryItems.remove(newGroceryItems[index]);
+                  // });
                 },
                 child: ListTile(
                   title: Text(newGroceryItems[index].name),
@@ -105,6 +123,11 @@ class _GroceryListState extends State<GroceryList> {
                   trailing: Text(newGroceryItems[index].quantity.toString()),
                 ),
               ));
+    }
+    if (fetchError != null) {
+      content = Center(
+        child: Text(fetchError!),
+      );
     }
 
     return Scaffold(
