@@ -1,7 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:grocelist/data/categories.dart';
 import 'package:grocelist/models/category.dart';
-import 'package:grocelist/models/grocery_item.dart';
+// import 'package:grocelist/models/grocery_item.dart';
 import 'package:http/http.dart' as http;
 
 class NewItem extends StatefulWidget {
@@ -24,14 +26,33 @@ class _NewItemState extends State<NewItem> {
     _formKey.currentState!.reset();
   }
 
-  void _saveItem() {
+  Future<void> _saveItem() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      Navigator.of(context).pop(GroceryItem(
-          id: DateTime.now().toString(),
-          name: enteredName,
-          quantity: enteredQuantity,
-          category: selectedCategory));
+      final url = Uri.https(
+          "grocelist-31cb2-default-rtdb.firebaseio.com", "shopping-list.json");
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: json.encode({
+          "name": enteredName,
+          "quantity": enteredQuantity,
+          "category": selectedCategory.title,
+        }),
+      );
+      print(response);
+      if (!context.mounted) {
+        return;
+      }
+      Navigator.of(context).pop();
+
+      // Navigator.of(context).pop(GroceryItem(
+      //     id: DateTime.now().toString(),
+      //     name: enteredName,
+      //     quantity: enteredQuantity,
+      //     category: selectedCategory));
     }
   }
 
@@ -90,10 +111,11 @@ class _NewItemState extends State<NewItem> {
                       ),
                       Expanded(
                         child: DropdownButtonFormField(
+                            value: selectedCategory,
                             items: [
                               for (final category in categories.entries)
                                 DropdownMenuItem(
-                                    value: selectedCategory,
+                                    value: category.value,
                                     child: Row(
                                       children: [
                                         Container(
