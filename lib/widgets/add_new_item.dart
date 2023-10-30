@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:grocelist/data/categories.dart';
 import 'package:grocelist/models/category.dart';
-// import 'package:grocelist/models/grocery_item.dart';
+import 'package:grocelist/models/grocery_item.dart';
 import 'package:http/http.dart' as http;
 
 class NewItem extends StatefulWidget {
@@ -18,6 +18,8 @@ class NewItem extends StatefulWidget {
 class _NewItemState extends State<NewItem> {
   final _formKey = GlobalKey<FormState>();
 
+  var isSending = false;
+
   var enteredName = "";
   var enteredQuantity = 1;
   var selectedCategory = categories[Categories.dairy]!;
@@ -28,32 +30,36 @@ class _NewItemState extends State<NewItem> {
 
   Future<void> _saveItem() async {
     if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      final url = Uri.https(
-          "grocelist-31cb2-default-rtdb.firebaseio.com", "shopping-list.json");
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: json.encode({
-          "name": enteredName,
-          "quantity": enteredQuantity,
-          "category": selectedCategory.title,
-        }),
-      );
-      // print(response);
-      if (!context.mounted) {
-        return;
-      }
-      Navigator.of(context).pop();
-
-      // Navigator.of(context).pop(GroceryItem(
-      //     id: DateTime.now().toString(),
-      //     name: enteredName,
-      //     quantity: enteredQuantity,
-      //     category: selectedCategory));
+      setState(() {
+        isSending = true;
+      });
     }
+    _formKey.currentState!.save();
+    final url = Uri.https(
+        "grocelist-31cb2-default-rtdb.firebaseio.com", "shopping-list.json");
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: json.encode({
+        "name": enteredName,
+        "quantity": enteredQuantity,
+        "category": selectedCategory.title,
+      }),
+    );
+    final Map<String, dynamic> responseData = json.decode(response.body);
+
+    if (!context.mounted) {
+      return;
+    }
+    // Navigator.of(context).pop();
+
+    Navigator.of(context).pop(GroceryItem(
+        id: responseData['name'],
+        name: enteredName,
+        quantity: enteredQuantity,
+        category: selectedCategory));
   }
 
   @override
@@ -145,12 +151,18 @@ class _NewItemState extends State<NewItem> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
-                        onPressed: _reset,
+                        onPressed: isSending ? null : _reset,
                         child: const Text("Reset"),
                       ),
                       ElevatedButton(
-                        onPressed: _saveItem,
-                        child: const Text("Add item"),
+                        onPressed: isSending ? null : _saveItem,
+                        child: isSending
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(),
+                              )
+                            : const Text("Add item"),
                       )
                     ],
                   )
