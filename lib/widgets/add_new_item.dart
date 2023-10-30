@@ -42,7 +42,7 @@ class _NewItemState extends State<NewItem> {
           "category": selectedCategory.title,
         }),
       );
-      print(response);
+      // print(response);
       if (!context.mounted) {
         return;
       }
