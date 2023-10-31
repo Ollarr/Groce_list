@@ -42,6 +42,12 @@ class _GroceryListState extends State<GroceryList> {
         fetchError = "Failed to fetch data, Please try again later";
       });
     }
+    if (response.body == "null") {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
     final Map<String, dynamic> groceryListData = json.decode(response.body);
     // This is created temporarily here so that it can replace newGroceryItems later.
     final List<GroceryItem> groceryListItem = [];
@@ -93,6 +99,24 @@ class _GroceryListState extends State<GroceryList> {
     // });
   }
 
+  void removeItem(GroceryItem item) async {
+    final index = newGroceryItems.indexOf(item);
+
+    setState(() {
+      newGroceryItems.remove(item);
+    });
+
+    final url = Uri.https("grocelist-31cb2-default-rtdb.firebaseio.com",
+        "shopping-list/${item.id}.json");
+
+    final response = await http.delete(url);
+    if (response.statusCode >= 400) {
+      setState(() {
+        newGroceryItems.insert(index, item);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget content = const Center(
@@ -109,6 +133,7 @@ class _GroceryListState extends State<GroceryList> {
           itemBuilder: (ctx, index) => Dismissible(
                 key: ValueKey(newGroceryItems[index].id),
                 onDismissed: (direction) {
+                  removeItem(newGroceryItems[index]);
                   // setState(() {
                   //   newGroceryItems.remove(newGroceryItems[index]);
                   // });
