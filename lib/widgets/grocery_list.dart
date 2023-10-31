@@ -34,43 +34,48 @@ class _GroceryListState extends State<GroceryList> {
   void fetchGroceryItems() async {
     final url = Uri.https(
         "grocelist-31cb2-default-rtdb.firebaseio.com", "shopping-list.json");
+    try {
+      final response = await http.get(url);
 
-    final response = await http.get(url);
+      if (response.statusCode >= 400) {
+        setState(() {
+          fetchError = "Failed to fetch data, Please try again later";
+        });
+      }
+      if (response.body == "null") {
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
+      final Map<String, dynamic> groceryListData = json.decode(response.body);
+      // This is created temporarily here so that it can replace newGroceryItems later.
+      final List<GroceryItem> groceryListItem = [];
+      for (final item in groceryListData.entries) {
+        // This is done to search for the category that matches the grocery item
+        // firstWhere method works almost like where method, only that it returns the first element that pass the test
+        final category = categories.entries
+            .firstWhere(
+                (catItem) => catItem.value.title == item.value["category"])
+            .value;
 
-    if (response.statusCode >= 400) {
+        groceryListItem.add(GroceryItem(
+          id: item.key,
+          name: item.value["name"],
+          quantity: item.value['quantity'],
+          category: category,
+        ));
+      }
       setState(() {
-        fetchError = "Failed to fetch data, Please try again later";
-      });
-    }
-    if (response.body == "null") {
-      setState(() {
+        newGroceryItems = groceryListItem;
         isLoading = false;
       });
-      return;
+      // print(groceryListItem);
+    } catch (err) {
+      setState(() {
+        fetchError = "Somewthing went wrong! Please try again later.";
+      });
     }
-    final Map<String, dynamic> groceryListData = json.decode(response.body);
-    // This is created temporarily here so that it can replace newGroceryItems later.
-    final List<GroceryItem> groceryListItem = [];
-    for (final item in groceryListData.entries) {
-      // This is done to search for the category that matches the grocery item
-      // firstWhere method works almost like where method, only that it returns the first element that pass the test
-      final category = categories.entries
-          .firstWhere(
-              (catItem) => catItem.value.title == item.value["category"])
-          .value;
-
-      groceryListItem.add(GroceryItem(
-        id: item.key,
-        name: item.value["name"],
-        quantity: item.value['quantity'],
-        category: category,
-      ));
-    }
-    setState(() {
-      newGroceryItems = groceryListItem;
-      isLoading = false;
-    });
-    print(groceryListItem);
   }
 
   void addItem() async {
